@@ -1,55 +1,65 @@
 # @geolonia/normalize-japanese-addresses
 
-[![build](https://github.com/geolonia/normalize-japanese-addresses/actions/workflows/build.yml/badge.svg)](https://github.com/geolonia/normalize-japanese-addresses/actions/workflows/build.yml)
+> 日本語のREADMEはこちらです: [README.ja.md](README.ja.md)
 
-オープンソースの住所正規化ライブラリです。
+[
+![build](https://github.com/geolonia/normalize-japanese-addresses/actions/workflows/build.yml/badge.svg)
+](https://github.com/geolonia/normalize-japanese-addresses/actions/workflows/build.yml)
 
-経産省の [IMI コンポーネントツール](https://info.gbiz.go.jp/tools/imi_tools/)のジオコーディングの仕組みからインスピレーションをうけて開発しました。
+An open-source Japanese address normalization library, inspired by the geocoding mechanism of the [IMI Component Tools](https://info.gbiz.go.jp/tools/imi_tools/) from Japan's Ministry of Economy, Trade, and Industry.
 
-## デモ
+## Demos
 
-- https://codepen.io/geolonia/pen/oNBrqzL
-- https://code4fukui.github.io/normalize-japanese-addresses/
+- [CodePen Demo](https://codepen.io/geolonia/pen/oNBrqzL)
+- [Interactive Example](https://code4fukui.github.io/normalize-japanese-addresses/)
 
-##  インストール
+## Features
 
-ライブラリは npm レジストリで `@geolonia/normalize-japanese-addresses` として配布されています。
-npm コマンドなどを使ってインストールして下さい。
+- **Standardization**: Converts addresses into a consistent, standard format.
+- **Kanji Normalization**: Handles variations between old (旧字体) and new (新字体) kanji forms, as well as other common character variations (e.g., `ヶ` vs `ケ`, `釜` vs `竈`, `埠頭` vs `ふ頭`).
+- **Number Conversion**: Unifies address numbers, converting numbers in town names (町丁目) to Kanji and block/house numbers (番地号) to Arabic numerals.
+- **Character Width**: Converts all full-width (zenkaku) alphanumeric characters to half-width (hankaku).
+- **Address Completion**: Automatically complements missing `郡` (county) names.
+- **Kyoto Address Support**: Removes non-standard Kyoto street names (通り名) to simplify addresses.
+- **Geolocation**: Returns latitude and longitude for normalized addresses where available.
+
+## Installation
+
+Install the library from the npm registry using your package manager of choice.
 
 ```shell
-$ npm install @geolonia/normalize-japanese-addresses -S
+npm install @geolonia/normalize-japanese-addresses
 ```
 
-## 使い方
+## Usage
 
-### `normalize(address: string, option: Option)`
+### `normalize(address: string, option?: Option)`
 
-住所を正規化します。
+Normalizes a given Japanese address string.
+
+**Node.js (CommonJS)**
 
 ```javascript
-const { normalize } = require('@geolonia/normalize-japanese-addresses')
+const { normalize } = require('@geolonia/normalize-japanese-addresses');
+
 normalize('北海道札幌市西区24-2-2-3-3').then(result => {
-  console.log(result); // {"pref": "北海道", "city": "札幌市西区", "town": "二十四軒二条二丁目", "addr": "3-3", "lat": 43.074273, "lng": 141.315099, "level"; 3}
-})
+  console.log(result);
+  /*
+  {
+    pref: '北海道',
+    city: '札幌市西区',
+    town: '二十四軒二条二丁目',
+    addr: '3-3',
+    lat: 43.074273,
+    lng: 141.315099,
+    level: 3
+  }
+  */
+});
 ```
 
-住所の正規化結果として戻されるオブジェクトには、`level` プロパティが含まれます。`level` には、住所文字列のどこまでを判別できたかを以下の数値で格納しています。
+**Browser / Deno (ES Modules)**
 
-* `0` - 都道府県も判別できなかった。
-* `1` - 都道府県まで判別できた。
-* `2` - 市区町村まで判別できた。
-* `3` - 町丁目まで判別できた。
-
-例えば都道府県名のみを正規化したい場合、`level` オプションで指定することで処理を速くすることができます。
-
-```javascript
-const { normalize } = require('@geolonia/normalize-japanese-addresses')
-normalize('北海道札幌市西区24-2-2-3-3', { level: 1 }).then(result => {
-  console.log(result); // {"pref": "北海道", "city": "", "town": "", "addr": "札幌市西区二十四軒二条二丁目3-3", "lat": null, "lng": null, "level"; 1}
-})
-```
-
-ESモジュールとして使う（ブラウザ or Deno）
 ```javascript
 import { normalize } from "https://code4fukui.github.io/normalize-japanese-addresses/dist/main-es.js";
 
@@ -57,104 +67,129 @@ const result = await normalize('北海道札幌市西区24-2-2-3-3');
 console.log(result);
 ```
 
-### グローバルオプション
+### Normalization Level
 
-以下のパラメーターを変更することでライブラリの動作全体に関わる設定が変更できます。
+The returned object includes a `level` property indicating how much of the address was successfully parsed.
 
-#### `config.townCacheSize: number`
+- `0`: Could not identify the prefecture.
+- `1`: Identified up to the prefecture.
+- `2`: Identified up to the city/ward/county.
+- `3`: Identified up to the town/area (町丁目).
+- `7`: (High-precision mode) Identified up to the residential block (街区).
+- `8`: (High-precision mode) Identified up to the residential block and number (住居番号).
 
-＠geolonia/normalize-japanese-addresses は市区町村毎の最新の町丁目のデータを web API から取得し住所の正規化を行います。`townCacheSize` オプションはキャッシュする市区町村の数を変更します。デフォルトは 1,000 件になっています。
-
-#### `config.japaneseAddressesApi: string`
-
-町丁目データを配信する web API のエンドポイントを指定します。デフォルトは `https://geolonia.github.io/japanese-addresses/api/ja` です。この API から配信されるデータのディレクトリ構成は [Geolonia 住所データ](https://github.com/geolonia/japanese-addresses/tree/develop/api)を参考にしてください。
-
-このオプションに対して `file://` 形式の URL を指定することで、ローカルファイルとして保存したファイルを参照することができます。
-
-##### 使用例
-
-```shell
-# Geolonia 住所データのダウンロード
-$ curl -sL https://github.com/geolonia/japanese-addresses/archive/refs/heads/master.tar.gz | tar xvfz -
-```
+You can set the desired normalization level using the `level` option for faster processing.
 
 ```javascript
-const { config, normalize } = require('@geolonia/normalize-japanese-addresses')
-config.japaneseAddressesApi = 'file:///path/to/japanese-addresses-master/api/ja'
-
-(function(){
-  for (address of addresses) {
-    await normalize(address)
+normalize('北海道札幌市西区24-2-2-3-3', { level: 1 }).then(result => {
+  console.log(result);
+  /*
+  {
+    pref: '北海道',
+    city: '',
+    town: '',
+    addr: '札幌市西区二十四軒二条二丁目3-3',
+    lat: null,
+    lng: null,
+    level: 1
   }
-})()
+  */
+});
 ```
 
-## 正規化の内容
+### High-Precision Normalization (Residential Level)
 
-* `XXX郡` などの郡の名前が省略されている住所に対しては、それを補完します。
-* 住所に含まれるアルファベットと数字を半角に統一します。
-* 京都の通り名を削除します。
-* 新字体と旧字体のゆらぎを吸収して、国交省の位置参照情報に記載されている地名にあわせます。
-* `ヶケが`、`ヵカか力`、`之ノの`、`ッツっつ` などのゆらぎを吸収して、国交省の位置参照情報に記載されている地名にあわせます。
-* `釜`と`竈`、`埠頭`と`ふ頭`などの漢字のゆらぎを吸収します。
-* 町丁目レベルに記載されている数字は、国交省の位置参照情報にあわせて、すべて漢数字に変換します。
-* 番地や号レベルに記載されている数字はアラビア数字に変換し、`番地` などの文字列は `-` に変換します。
-* 住所の末尾に建物名がある場合は、なるべくなにもしないでそのまま返す仕様になっていますが、できればあらかじめ分離していただいたほうがいいかもしれません。
-
-参考:
-
-* [ゆらぎを処理している文字列に関しては、ソースコードを御覧ください。](https://github.com/geolonia/normalize-japanese-addresses/blob/master/src/lib/dict.ts)
-* [変換前、変換後の住所の例はテストコードを御覧ください。](https://github.com/geolonia/normalize-japanese-addresses/blob/master/test/main.test.ts)
-
-
-## 開発者向け情報
-
-まず、以下のコマンドで環境を用意してください。
-
-```shell
-$ git clone git@github.com:geolonia/normalize-japanese-addresses.git
-$ cd normalize-japanese-addresses
-$ npm install
-```
-
-次に、以下を実行してコンパイルをおこないます。
-
-```shell
-$ npm run build
-```
-
-dist フォルダ以下に main-node.js など必要なファイルが生成されるので、
+For more accurate results, including residential block and number parsing (levels 7 and 8), you can use the Geolonia backend by providing a `geoloniaApiKey`.
 
 ```javascript
-// sample.js
-const { normalize } = require('./dist/main-node.js');
-normalize('北海道札幌市西区24-2-2-3-3', { level: 3 }).then(result => {
-  console.log(result); // { "pref": "北海道", "city": "", "town": "", "addr": "札幌市西区二十四軒二条二丁目3-3", "level": 1 }
-})
+normalize('東京都世田谷区北烏山６−２２−２２', {
+  geoloniaApiKey: 'YOUR-API-KEY',
+}).then(result => {
+  console.log(result);
+  /*
+  {
+    pref: '東京都',
+    city: '世田谷区',
+    town: '北烏山六丁目',
+    addr: '',
+    lat: 35.68451,
+    lng: 139.59951,
+    gaiku: '22',
+    jyukyo: '22',
+    level: 8
+  }
+  */
+});
 ```
 
-という内容で sample.js を用意したら、
+## Configuration
+
+You can modify the library's global behavior by setting properties on the `config` object.
+
+```javascript
+const { config, normalize } = require('@geolonia/normalize-japanese-addresses');
+```
+
+- **`config.townCacheSize: number`**
+  The library fetches and caches town data (町丁目) for each municipality. This option sets the maximum number of municipalities to cache. The default is `1000`.
+
+- **`config.japaneseAddressesApi: string`**
+  Specifies the endpoint for the Japanese address data API. The default is `https://geolonia.github.io/japanese-addresses/api/ja`.
+
+  You can point this to a local directory using the `file://` protocol. This is useful for offline use or for using your own address data.
+
+  **Example: Using Local Address Data**
+
+  1.  Download the address data from [geolonia/japanese-addresses](https://github.com/geolonia/japanese-addresses).
+      ```shell
+      curl -sL https://github.com/geolonia/japanese-addresses/archive/refs/heads/master.tar.gz | tar xvfz -
+      ```
+  2.  Set the `japaneseAddressesApi` config to the local path.
+      ```javascript
+      const path = require('path');
+      const { config, normalize } = require('@geolonia/normalize-japanese-addresses');
+
+      const localDataPath = path.resolve(__dirname, 'japanese-addresses-master/api/ja');
+      config.japaneseAddressesApi = `file://${localDataPath}`;
+
+      normalize('...your address...');
+      ```
+
+## Limitations
+
+- This library is designed for address matching and may remove parts of an address, such as Kyoto's traditional street names, that are not required for postal services.
+- The default open-data mode normalizes up to the town/area (町丁目) level. For residential block/number level, the high-precision mode with an API key is required.
+- Normalization may be less accurate for areas without a standardized residential addressing system (住居表示未整備).
+
+## For Developers
+
+To set up a local development environment:
 
 ```shell
-$ node sample.js
+# 1. Clone the repository
+git clone https://github.com/geolonia/normalize-japanese-addresses.git
+cd normalize-japanese-addresses
+
+# 2. Install dependencies
+npm install
+
+# 3. Build the project
+npm run build
+
+# 4. Run tests
+npm test
 ```
 
-でサンプルファイルを実行することができます。
+## Contributing
 
-## 注意
+Pull requests and Issues are always welcome.
 
-* この正規化エンジンは、住所の「名寄せ」を目的としており、たとえば京都の「通り名」は削除します。
-  * 郵便や宅急便などに使用される住所としては、問題ないと考えています。
-* この正規化エンジンは、町丁目及び小字レベルまでは対応していますが、それ以降については対応しておりません。
-* 住居表示が未整備の地域については全体的に苦手です。
+For details on the normalization logic, please refer to the source code:
+- **String variations:** [`src/lib/dict.ts`](https://github.com/geolonia/normalize-japanese-addresses/blob/master/src/lib/dict.ts)
+- **Before/after examples:** [`test/main.test.ts`](https://github.com/geolonia/normalize-japanese-addresses/blob/master/test/main.test.ts)
 
-### 貢献方法
+## License
 
-[プルリクエスト](https://github.com/geolonia/normalize-japanese-addresses/pulls) や [Issue](https://github.com/geolonia/normalize-japanese-addresses/issues) はいつでも歓迎します。
+This project is licensed under the MIT License.
 
-## ライセンス、利用規約
-
-- ソースコードのライセンスは MIT ライセンスです。
-- ご利用に際しましては、できればソーシャルでのシェア、[Geolonia](https://geolonia.com/) へのリンクの設置などをしていただけると、開発者たちのモチベーションが上がると思います。
-
-住所の正規化を工夫すれば精度があがりそうなので、そのあたりのアイディアを募集しています。
+We would appreciate it if you could share this project on social media or link to [Geolonia](https://geolonia.com/) to help motivate our developers.
